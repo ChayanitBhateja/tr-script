@@ -1,43 +1,43 @@
 import os
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
 
-def upload_to_s3(file_name, object_name=None):
+def upload_files_to_s3(directory, bucket_name):
     """
-    Upload a file to an S3 bucket
+    Upload all files in the specified directory to the given S3 bucket.
 
-    :param file_name: File to upload
-    :param object_name: S3 object name. If not specified, file_name is used
-    :return: True if file was uploaded, else False
+    :param directory: Directory containing files to upload
+    :param bucket_name: S3 bucket name
+    :return: None
     """
-    # Get the bucket name from environment variable
-    # BUCKET = os.getenv("S3_BUCKET_NAME")
-    BUCKET = 'tr-bckt'
+    # Initialize the S3 client
+    s3_client = boto3.client('s3')
 
-    # Check if bucket name is not None
-    if BUCKET is None:
-        print("S3 bucket name is not set as an environment variable")
-        return False
+    # Check if directory exists
+    if not os.path.isdir(directory):
+        print(f"The directory '{directory}' does not exist.")
+        return
 
-    # If S3 object_name was not specified, use file_name
-    if object_name is None:
-        object_name = file_name
+    # Iterate over all files in the directory
+    for file_name in os.listdir(directory):
+        file_path = os.path.join(directory, file_name)
 
-    # Upload the file
-    s3_client = boto3.client("s3")
-    try:
-        s3_client.upload_file(file_name, BUCKET, object_name)
-        print(f"File '{file_name}' uploaded to '{BUCKET}/{object_name}'")
-        return True
-    except FileNotFoundError:
-        print(f"The file '{file_name}' was not found")
-        return False
-    except NoCredentialsError:
-        print("Credentials not available")
-        return False
+        # Skip directories, only upload files
+        if os.path.isfile(file_path):
+            try:
+                # Upload the file
+                s3_client.upload_file(file_path, bucket_name, file_name)
+                print(f"File '{file_name}' uploaded to bucket '{bucket_name}'.")
+            except FileNotFoundError:
+                print(f"The file '{file_path}' was not found.")
+            except NoCredentialsError:
+                print("Credentials not available.")
+            except ClientError as e:
+                print(f"Failed to upload '{file_name}': {e}")
 
-
-# Example usage
 if __name__ == "__main__":
-    file_name = "./ChayanitBhatejaDataScientistResume.pdf"
-    upload_to_s3(file_name)
+    # Example usage
+    directory_to_upload = 'C:/path/to/your/directory'
+    s3_bucket_name = 'your-bucket-name'
+    
+    upload_files_to_s3(directory_to_upload, s3_bucket_name)
